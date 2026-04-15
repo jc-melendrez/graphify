@@ -1,0 +1,19 @@
+# General
+.DS_Store
+.env
+*.log
+
+# Firebase (The most important one!)
+serviceAccountKey.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Django
+db.sqlite3
+local_settings.py
+media/
