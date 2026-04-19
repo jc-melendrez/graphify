@@ -5,21 +5,50 @@
     <title>Graphify - Login</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-        #result { margin-top: 20px; font-size: 14px; color: #555; min-height: 1.2em; }
-        .login-btn { display: block; text-decoration: none; padding: 12px 24px; margin-top: 10px; font-size: 16px; cursor: pointer; color: white; border: none; border-radius: 6px; font-weight: bold; width: 100%; box-sizing: border-box; transition: opacity 0.2s; }
-        #google-login { background-color: #4285F4; }
-        #github-login { background-color: #333; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .card { background: white; padding: 2rem 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 380px; text-align: center; }
+        h2 { margin-bottom: 20px; }
+        form { display: flex; flex-direction: column; }
+        input { padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; }
+        .form-btn { padding: 12px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        .messages { list-style: none; padding: 0; margin: 0 0 15px 0; }
+        .messages .error, .messages .warning { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; padding: 10px; border-radius: 6px; }
+        .divider { display: flex; align-items: center; text-align: center; color: #aaa; margin: 25px 0; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #ddd; }
+        .divider:not(:empty)::before { margin-right: .5em; }
+        .divider:not(:empty)::after { margin-left: .5em; }
+        .social-login { display: flex; justify-content: center; gap: 20px; }
+        .social-icon { display: inline-block; width: 40px; height: 40px; border-radius: 50%; background-color: #eee; background-size: 60%; background-repeat: no-repeat; background-position: center; transition: background-color 0.2s; }
+        .social-icon:hover { background-color: #ddd; }
+        #google-login-icon { background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'); }
+        #github-login-icon { background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg'); background-color: #f5f5f5; }
+        .register-link { margin-top: 20px; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>Graphify</h2>
-        <p>Sign in with your Project</p>
-        <button id="google-login" class="login-btn">Sign in with Google</button>
-        <a id="github-login" href="{% url 'github_login' %}" class="login-btn">Sign in with GitHub</a>
-        <div id="result">Ready</div>
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="form-btn">Sign In</button>
+        </form>
+        <div class="register-link">
+            <p>Don't have an account? <a href="{% url 'register' %}">Create one</a></p>
+        </div>
+        <div class="divider">or</div>
+        <div class="social-login">
+            <a id="google-login-icon" class="social-icon" title="Sign in with Google"></a>
+            <a id="github-login-icon" href="{% url 'github_login' %}" class="social-icon" title="Sign in with GitHub"></a>
+        </div>
+        <div id="result" style="margin-top: 15px; font-size: 14px; color: #555; min-height: 1.2em;"></div>
     </div>
 
 <script type="module">
@@ -40,11 +69,11 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const btn = document.getElementById('google-login');
+    const googleBtn = document.getElementById('google-login-icon');
     const resultDiv = document.getElementById('result');
 
-    btn.onclick = async () => {
-        btn.disabled = true;
+    googleBtn.onclick = async () => {
+        googleBtn.style.pointerEvents = 'none'; // Disable clicks
         resultDiv.innerText = "Opening Google...";
 
         try {
@@ -66,12 +95,12 @@
                     window.location.href = '/dashboard/';
                 } else {
                     resultDiv.innerText = "Django Error: " + data.message;
-                    btn.disabled = false;
+                    googleBtn.style.pointerEvents = 'auto';
                 }
             }
         } catch (error) {
             console.error("Auth Error:", error.code, error.message);
-            btn.disabled = false;
+            googleBtn.style.pointerEvents = 'auto';
             
             if (error.code === 'auth/popup-closed-by-user') {
                 resultDiv.innerText = "Popup closed. Please try again.";

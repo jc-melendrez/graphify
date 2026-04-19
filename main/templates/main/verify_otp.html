@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Your Account - Graphify</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        h2 { margin-bottom: 10px; }
+        p { color: #555; margin-bottom: 20px; }
+        input { padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; text-align: center; letter-spacing: 0.5em; }
+        .form-btn { padding: 12px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; width: 100%; }
+        .messages { list-style: none; padding: 0; margin: 0 0 15px 0; }
+        .messages .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; }
+        .messages .success { color: #155724; background: #d4edda; padding: 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Check your email</h2>
+        <p>We've sent a 6-digit code to <strong>{{ email }}</strong>. The code expires in 5 minutes.</p>
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="otp" placeholder="_ _ _ _ _ _" maxlength="6" required>
+            <button type="submit" class="form-btn">Verify</button>
+        </form>
+    </div>
+</body>
+</html>

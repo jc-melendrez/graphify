@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 import os
+import json
+import base64
 from pathlib import Path
 import firebase_admin
 from firebase_admin import credentials
@@ -24,17 +26,46 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
-# Firebase Admin SDK initialization
-# IMPORTANT: Replace 'your-service-account-key.json' with the actual name of your key file,
-# and make sure the file is in the 'C:\Users\Pc\OneDrive\Desktop\UTOY\Integration_project\graphify' directory.
-SERVICE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, 'serviceAccountKey.json')
+def load_firebase_service_account():
+    json_value = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY_JSON')
+    base64_value = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY_BASE64')
 
+    if json_value:
+        try:
+            return json.loads(json_value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                'Invalid JSON in FIREBASE_SERVICE_ACCOUNT_KEY_JSON'
+            ) from exc
+
+    if base64_value:
+        try:
+            decoded = base64.b64decode(base64_value).decode('utf-8')
+            return json.loads(decoded)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                'Invalid base64 or JSON in FIREBASE_SERVICE_ACCOUNT_KEY_BASE64'
+            ) from exc
+
+    local_path = BASE_DIR / 'serviceAccountKey.json'
+    if local_path.exists():
+        return str(local_path)
+
+    return None
+
+
+firebase_service_account = load_firebase_service_account()
 if not firebase_admin._apps:
-    logging.info("Initializing Firebase Admin SDK...")
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    project_id = firebase_admin.get_app().project_id
-    logging.info("Firebase Admin SDK initialized successfully for project: %s", project_id)
+    if firebase_service_account is None:
+        logging.warning(
+            'Firebase service account not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY_JSON or FIREBASE_SERVICE_ACCOUNT_KEY_BASE64, or place serviceAccountKey.json in the project root.'
+        )
+    else:
+        logging.info('Initializing Firebase Admin SDK...')
+        cred = credentials.Certificate(firebase_service_account)
+        firebase_admin.initialize_app(cred)
+        project_id = firebase_admin.get_app().project_id
+        logging.info('Firebase Admin SDK initialized successfully for project: %s', project_id)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -168,3 +199,14 @@ SESSION_SAVE_EVERY_REQUEST = True
 # GitHub OAuth Credentials - Replace with your own
 GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
 GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
+
+# Email Configuration (for development)
+# This backend prints emails to the console instead of sending them.
+# To send real emails, comment out the console backend and uncomment the SMTP settings.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
