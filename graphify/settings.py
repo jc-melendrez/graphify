@@ -79,10 +79,14 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'private-mustiness-babied.ngrok-free.dev',
     'localhost:80',
-    '127.0.0.1'
+    '127.0.0.1',
+    'graphify-bgcw.onrender.com',
 ]
 
-CSRF_TRUSTED_ORIGINS = ['https://private-mustiness-babied.ngrok-free.dev']
+CSRF_TRUSTED_ORIGINS = [
+    'https://private-mustiness-babied.ngrok-free.dev',
+    'https://graphify-bgcw.onrender.com',
+]
 
 # settings.py
 
