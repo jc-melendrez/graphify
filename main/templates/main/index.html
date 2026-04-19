@@ -7,7 +7,9 @@
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
         #result { margin-top: 20px; font-size: 14px; color: #555; min-height: 1.2em; }
-        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #4285F4; color: white; border: none; border-radius: 6px; font-weight: bold; width: 100%; transition: opacity 0.2s; }
+        .login-btn { display: block; text-decoration: none; padding: 12px 24px; margin-top: 10px; font-size: 16px; cursor: pointer; color: white; border: none; border-radius: 6px; font-weight: bold; width: 100%; box-sizing: border-box; transition: opacity 0.2s; }
+        #google-login { background-color: #4285F4; }
+        #github-login { background-color: #333; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
@@ -15,7 +17,8 @@
     <div class="card">
         <h2>Graphify</h2>
         <p>Sign in with your Project</p>
-        <button id="google-login">Sign in with Google</button>
+        <button id="google-login" class="login-btn">Sign in with Google</button>
+        <a id="github-login" href="{% url 'github_login' %}" class="login-btn">Sign in with GitHub</a>
         <div id="result">Ready</div>
     </div>
 

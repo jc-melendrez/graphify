@@ -13,11 +13,16 @@ import os
 from pathlib import Path
 import firebase_admin
 from firebase_admin import credentials
+from dotenv import load_dotenv
 import logging
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 
 # Firebase Admin SDK initialization
 # IMPORTANT: Replace 'your-service-account-key.json' with the actual name of your key file,
@@ -35,7 +40,7 @@ if not firebase_admin._apps:
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zlhyri48l#$pwgp6-7nd0(8t-*vsjs33b!tw5ub(+3r5e82fv&'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -55,6 +60,10 @@ CSRF_TRUSTED_ORIGINS = ['https://private-mustiness-babied.ngrok-free.dev']
 
 # This allows the popup and your main window to communicate
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
+# Tell Django to trust the X-Forwarded-Proto header from ngrok
+# This ensures request.build_absolute_uri() generates https:// URLs
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -155,3 +164,7 @@ LOGIN_URL = 'login'
 # Session configuration: Log users out after 1 day of inactivity.
 SESSION_COOKIE_AGE = 86400  # 1 day, in seconds.
 SESSION_SAVE_EVERY_REQUEST = True
+
+# GitHub OAuth Credentials - Replace with your own
+GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
+GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
