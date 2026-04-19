@@ -2,56 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Graphify Redirect Login</title>
+    <title>Graphify - Login</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
-        #result { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 80%; margin-top: 20px; border: 1px solid #ccc; white-space: pre-wrap; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #4285F4; color: white; border: none; border-radius: 4px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        #result { margin-top: 20px; font-size: 14px; color: #555; min-height: 1.2em; }
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #4285F4; color: white; border: none; border-radius: 6px; font-weight: bold; width: 100%; transition: opacity 0.2s; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h2>Graphify</h2>
+        <p>Sign in with your Project</p>
+        <button id="google-login">Sign in with Google</button>
+        <div id="result">Ready</div>
+    </div>
 
-    <h2>Graphify Login (Redirect Method)</h2>
-    <button id="google-login">Sign in with Google</button>
-    <div id="result">Waiting for login...</div>
-
-    <script type="module">
-    // 1. Imports MUST come first
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // 2. Configuration
     const firebaseConfig = {
-        apiKey: "AIzaSyA19Dx9DDTw-u_GLXdwxLVjqi6mtbqY08A",
-        authDomain: "graphify-e759e.firebaseapp.com",
-        projectId: "graphify-e759e",
-        storageBucket: "graphify-e759e.firebasestorage.app",
-        messagingSenderId: "55983034598",
-        appId: "1:55983034598:web:af8020e0f8920b697ceb27"
+        apiKey: "AIzaSyCXvYNYWvfz5dqXYdxo6xbUMa3gR6O4S0M",
+        // CRITICAL: This must remain the firebaseapp.com URL to avoid the 404
+        authDomain: "graphify-6b6aa.firebaseapp.com", 
+        projectId: "graphify-6b6aa",
+        storageBucket: "graphify-6b6aa.firebasestorage.app",
+        messagingSenderId: "401125682755",
+        appId: "1:401125682755:web:8ccb2a2edc7143fb25eef6"
     };
 
-    // 3. Initialization
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const loginBtn = document.getElementById('google-login');
+    const btn = document.getElementById('google-login');
     const resultDiv = document.getElementById('result');
 
-    // 4. THE REDIRECT CHECK (Runs on page load)
-    async function handleRedirectResult() {
-        console.log("Page loaded, checking for redirect result...");
-        resultDiv.innerText = "Checking authentication status...";
-        try {
-            const result = await getRedirectResult(auth);
-            
-            if (result) {
-                console.log("User found in redirect!", result.user.email);
-                resultDiv.innerText = "Google authenticated! Verifying with Django...";
+    btn.onclick = async () => {
+        btn.disabled = true;
+        resultDiv.innerText = "Opening Google...";
 
+        try {
+            // signInWithPopup is more stable for ngrok testing
+            const result = await signInWithPopup(auth, provider);
+            
+            if (result.user) {
+                resultDiv.innerText = "Authenticated! Syncing with Django...";
                 const idToken = await result.user.getIdToken();
                 
-                // Send to your Django view
                 const response = await fetch('/auth/google/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -59,32 +59,29 @@
                 });
 
                 const data = await response.json();
-                
                 if (data.status === "success") {
-                    resultDiv.innerText = "Login Successful! Redirecting to dashboard...";
-                    // Redirect to your dashboard view
                     window.location.href = '/dashboard/';
                 } else {
-                    resultDiv.innerText = "Login Failed: " + data.message;
+                    resultDiv.innerText = "Django Error: " + data.message;
+                    btn.disabled = false;
                 }
-            } else {
-                console.log("No redirect result found yet.");
-                resultDiv.innerText = "Please sign in.";
             }
         } catch (error) {
-            console.error("Redirect Error caught:", error.code, error.message);
-            resultDiv.innerText = "Error: " + error.message;
+            console.error("Auth Error:", error.code, error.message);
+            btn.disabled = false;
+            
+            if (error.code === 'auth/popup-closed-by-user') {
+                resultDiv.innerText = "Popup closed. Please try again.";
+            } else if (error.code === 'auth/invalid-credential') {
+                resultDiv.innerText = "Authentication failed (invalid credential). " +
+                                      "This is a configuration issue. Please double-check " +
+                                      "your OAuth Client ID settings in the Google Cloud Console " +
+                                      "and ensure they match your Firebase project.";
+            } else {
+                resultDiv.innerText = "Error: " + error.code;
+            }
         }
-    }
-
-    handleRedirectResult();
-
-    // 5. THE BUTTON CLICK
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault(); // Prevents the browser from navigating or submitting a form
-        resultDiv.innerText = "Leaving for Google...";
-        signInWithRedirect(auth, provider);
-    });
+    };
 </script>
 </body>
 </html>

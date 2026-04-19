@@ -3,7 +3,7 @@ import firebase_admin
 from firebase_admin import credentials
 from django.conf import settings
 
-class YourAppConfig(AppConfig):
+class MainConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'main'
 
