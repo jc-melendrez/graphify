@@ -81,11 +81,13 @@ ALLOWED_HOSTS = [
     'localhost:80',
     '127.0.0.1',
     'graphify-bgcw.onrender.com',
+    'graphify-io.onrender.com',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://private-mustiness-babied.ngrok-free.dev',
     'https://graphify-bgcw.onrender.com',
+    'https://graphify-io.onrender.com',
 ]
 
 # settings.py
