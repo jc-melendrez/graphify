@@ -55,14 +55,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAGtuVveXA3sJJcbt0nfbJUgdhuFLvBI_Q",
-        authDomain: "graphify-c692f.firebaseapp.com",
-        projectId: "graphify-c692f",
-        storageBucket: "graphify-c692f.firebasestorage.app",
-        messagingSenderId: "820024838430",
-        appId: "1:820024838430:web:1c8fb58c6e8b52f02ce10f"
-    };
+    // This safely reads the config injected by your Django view
+    const firebaseConfig = JSON.parse('{{ firebase_config|safe }}');
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -72,45 +66,33 @@
     const resultDiv = document.getElementById('result');
 
     googleBtn.onclick = async () => {
-        googleBtn.style.pointerEvents = 'none'; // Disable clicks
-        resultDiv.innerText = "Opening Google...";
+        googleBtn.style.pointerEvents = 'none';
+        resultDiv.innerText = "Signing in...";
 
         try {
-            // signInWithPopup is more stable for ngrok testing
+            // Using Popup instead of Redirect
             const result = await signInWithPopup(auth, provider);
+            const user = result.user;
             
-            if (result.user) {
-                resultDiv.innerText = "Authenticated! Syncing with Django...";
-                const idToken = await result.user.getIdToken();
-                
-                const response = await fetch('/auth/google/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_token: idToken })
-                });
+            resultDiv.innerText = "Authenticated! Syncing with Django...";
+            const idToken = await user.getIdToken();
+            
+            const response = await fetch('/auth/google/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken })
+            });
 
-                const data = await response.json();
-                if (data.status === "success") {
-                    window.location.href = '/dashboard/';
-                } else {
-                    resultDiv.innerText = "Django Error: " + data.message;
-                    googleBtn.style.pointerEvents = 'auto';
-                }
+            const data = await response.json();
+            if (data.status === "success") {
+                window.location.href = '/dashboard/';
+            } else {
+                resultDiv.innerText = "Django Error: " + data.message;
             }
         } catch (error) {
-            console.error("Auth Error:", error.code, error.message);
+            console.error("Auth Error (Popup):", error.code, error.message);
             googleBtn.style.pointerEvents = 'auto';
-            
-            if (error.code === 'auth/popup-closed-by-user') {
-                resultDiv.innerText = "Popup closed. Please try again.";
-            } else if (error.code === 'auth/invalid-credential') {
-                resultDiv.innerText = "Authentication failed (invalid credential). " +
-                                      "This is a configuration issue. Please double-check " +
-                                      "your OAuth Client ID settings in the Google Cloud Console " +
-                                      "and ensure they match your Firebase project.";
-            } else {
-                resultDiv.innerText = "Error: " + error.code;
-            }
+            resultDiv.innerText = "Error: " + error.code;
         }
     };
 </script>

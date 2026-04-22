@@ -25,13 +25,8 @@ def login_page(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         
-        # Try Firebase authentication for email users
         try:
             firebase_user = auth.get_user_by_email(email)
-            # If user exists in Firebase, verify password by attempting sign-in
-            # Note: Firebase Admin SDK doesn't support password verification directly
-            # For simplicity, assume if user exists, and we have a Django user, proceed
-            # In production, you'd use Firebase Auth REST API or client SDK for proper auth
             user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user)
@@ -39,7 +34,6 @@ def login_page(request):
             else:
                 messages.error(request, 'Invalid credentials. Please try again.')
         except auth.UserNotFoundError:
-            # Fallback to Django auth if not in Firebase (e.g., old users)
             user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user)
@@ -51,8 +45,11 @@ def login_page(request):
             logging.error(f"Login error: {e}")
             messages.error(request, 'Login failed. Please try again.')
 
-    return render(request, 'main/index.html')
-
+    # Securely pass the config to the template
+    context = {
+        'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
+    }
+    return render(request, 'main/index.html', context)
 @login_required
 def dashboard_view(request):
     # The user object is automatically available in the template context

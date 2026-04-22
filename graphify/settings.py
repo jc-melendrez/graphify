@@ -202,6 +202,16 @@ LOGIN_URL = 'login'
 SESSION_COOKIE_AGE = 86400  # 1 day, in seconds.
 SESSION_SAVE_EVERY_REQUEST = True
 
+# Add this to settings.py
+FIREBASE_PUBLIC_CONFIG = {
+    "apiKey": os.getenv("FIREBASE_API_KEY"),
+    "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+    "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+    "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+    "appId": os.getenv("FIREBASE_APP_ID")
+}
+
 # GitHub OAuth Credentials - Replace with your own
 GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
 GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
