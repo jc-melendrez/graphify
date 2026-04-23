@@ -3,3 +3,10 @@
 
 # Google Cloud service account key
 serviceAccountKey.json
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+venv/
