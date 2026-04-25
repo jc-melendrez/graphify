@@ -9,23 +9,98 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
+import json
+import base64
 from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials
+from dotenv import load_dotenv
+import logging
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+
+def load_firebase_service_account():
+    json_value = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY_JSON')
+    base64_value = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY_BASE64')
+
+    if json_value:
+        try:
+            return json.loads(json_value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                'Invalid JSON in FIREBASE_SERVICE_ACCOUNT_KEY_JSON'
+            ) from exc
+
+    if base64_value:
+        try:
+            decoded = base64.b64decode(base64_value).decode('utf-8')
+            return json.loads(decoded)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise ValueError(
+                'Invalid base64 or JSON in FIREBASE_SERVICE_ACCOUNT_KEY_BASE64'
+            ) from exc
+
+    local_path = BASE_DIR / 'serviceAccountKey.json'
+    if local_path.exists():
+        return str(local_path)
+
+    return None
+
+
+firebase_service_account = load_firebase_service_account()
+if not firebase_admin._apps:
+    if firebase_service_account is None:
+        logging.warning(
+            'Firebase service account not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY_JSON or FIREBASE_SERVICE_ACCOUNT_KEY_BASE64, or place serviceAccountKey.json in the project root.'
+        )
+    else:
+        logging.info('Initializing Firebase Admin SDK...')
+        cred = credentials.Certificate(firebase_service_account)
+        firebase_admin.initialize_app(cred)
+        project_id = firebase_admin.get_app().project_id
+        logging.info('Firebase Admin SDK initialized successfully for project: %s', project_id)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zlhyri48l#$pwgp6-7nd0(8t-*vsjs33b!tw5ub(+3r5e82fv&'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'private-mustiness-babied.ngrok-free.dev',
+    'localhost:80',
+    '127.0.0.1',
+    'graphify-bgcw.onrender.com',
+    'graphify-io.onrender.com',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://private-mustiness-babied.ngrok-free.dev',
+    'https://graphify-bgcw.onrender.com',
+    'https://graphify-io.onrender.com',
+]
+
+# settings.py
+
+
+# settings.py
+
+# This allows the popup and your main window to communicate
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
+# Tell Django to trust the X-Forwarded-Proto header from ngrok
+# This ensures request.build_absolute_uri() generates https:// URLs
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -49,7 +124,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'graphify.urls'
@@ -119,3 +194,35 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 CORS_ALLOW_ALL_ORIGINS = True
+
+# URL to redirect to for login, used by @login_required decorator
+LOGIN_URL = 'login'
+
+# Session configuration: Log users out after 1 day of inactivity.
+SESSION_COOKIE_AGE = 86400  # 1 day, in seconds.
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Add this to settings.py
+FIREBASE_PUBLIC_CONFIG = {
+    "apiKey": os.getenv("FIREBASE_API_KEY"),
+    "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+    "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+    "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+    "appId": os.getenv("FIREBASE_APP_ID")
+}
+
+# GitHub OAuth Credentials - Replace with your own
+GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
+GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
+
+# Email Configuration (for development)
+# This backend prints emails to the console instead of sending them.
+# To send real emails, comment out the console backend and uncomment the SMTP settings.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

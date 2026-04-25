@@ -1,19 +1,12 @@
-# General
-.DS_Store
+# Environment variables
 .env
-*.log
 
-# Firebase (The most important one!)
+# Google Cloud service account key
 serviceAccountKey.json
 
-# Python
 __pycache__/
-*.py[cod]
-*$py.class
-venv/
-env/
-
-# Django
+*.pyc
+*.pyo
+*.pyd
 db.sqlite3
-local_settings.py
-media/
+venv/

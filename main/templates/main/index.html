@@ -2,89 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Graphify Redirect Login</title>
+    <title>Graphify - Login</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
-        #result { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 80%; margin-top: 20px; border: 1px solid #ccc; white-space: pre-wrap; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #4285F4; color: white; border: none; border-radius: 4px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 2rem 2.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 380px; text-align: center; }
+        h2 { margin-bottom: 20px; }
+        form { display: flex; flex-direction: column; }
+        input { padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; }
+        .form-btn { padding: 12px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        .messages { list-style: none; padding: 0; margin: 0 0 15px 0; }
+        .messages .error, .messages .warning { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; padding: 10px; border-radius: 6px; }
+        .divider { display: flex; align-items: center; text-align: center; color: #aaa; margin: 25px 0; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #ddd; }
+        .divider:not(:empty)::before { margin-right: .5em; }
+        .divider:not(:empty)::after { margin-left: .5em; }
+        .social-login { display: flex; justify-content: center; gap: 20px; }
+        .social-icon { display: inline-block; width: 40px; height: 40px; border-radius: 50%; background-color: #eee; background-size: 60%; background-repeat: no-repeat; background-position: center; transition: background-color 0.2s; }
+        .social-icon:hover { background-color: #ddd; }
+        #google-login-icon { background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'); }
+        #github-login-icon { background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg'); background-color: #f5f5f5; }
+        .register-link { margin-top: 20px; font-size: 14px; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h2>Graphify</h2>
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="form-btn">Sign In</button>
+        </form>
+        <div class="register-link">
+            <p>Don't have an account? <a href="{% url 'register' %}">Create one</a></p>
+        </div>
+        <div class="divider">or</div>
+        <div class="social-login">
+            <a id="google-login-icon" class="social-icon" title="Sign in with Google"></a>
+            <a id="github-login-icon" href="{% url 'github_login' %}" class="social-icon" title="Sign in with GitHub"></a>
+        </div>
+        <div id="result" style="margin-top: 15px; font-size: 14px; color: #555; min-height: 1.2em;"></div>
+    </div>
 
-    <h2>Graphify Login (Redirect Method)</h2>
-    <button id="google-login">Sign in with Google</button>
-    <div id="result">Waiting for login...</div>
-
-    <script type="module">
-    // 1. Imports MUST come first
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // 2. Configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyA19Dx9DDTw-u_GLXdwxLVjqi6mtbqY08A",
-        authDomain: "graphify-e759e.firebaseapp.com",
-        projectId: "graphify-e759e",
-        storageBucket: "graphify-e759e.firebasestorage.app",
-        messagingSenderId: "55983034598",
-        appId: "1:55983034598:web:af8020e0f8920b697ceb27"
-    };
+    // This safely reads the config injected by your Django view
+    const firebaseConfig = JSON.parse('{{ firebase_config|safe }}');
 
-    // 3. Initialization
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const loginBtn = document.getElementById('google-login');
+    const googleBtn = document.getElementById('google-login-icon');
     const resultDiv = document.getElementById('result');
 
-    // 4. THE REDIRECT CHECK (Runs on page load)
-    async function handleRedirectResult() {
-        console.log("Page loaded, checking for redirect result...");
-        resultDiv.innerText = "Checking authentication status...";
+    googleBtn.onclick = async () => {
+        googleBtn.style.pointerEvents = 'none';
+        resultDiv.innerText = "Signing in...";
+
         try {
-            const result = await getRedirectResult(auth);
+            // Using Popup instead of Redirect
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
             
-            if (result) {
-                console.log("User found in redirect!", result.user.email);
-                resultDiv.innerText = "Google authenticated! Verifying with Django...";
+            resultDiv.innerText = "Authenticated! Syncing with Django...";
+            const idToken = await user.getIdToken();
+            
+            const response = await fetch('/auth/google/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken })
+            });
 
-                const idToken = await result.user.getIdToken();
-                
-                // Send to your Django view
-                const response = await fetch('/auth/google/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id_token: idToken })
-                });
-
-                const data = await response.json();
-                
-                if (data.status === "success") {
-                    resultDiv.innerText = "Login Successful! Redirecting to dashboard...";
-                    // Redirect to your dashboard view
-                    window.location.href = '/dashboard/';
-                } else {
-                    resultDiv.innerText = "Login Failed: " + data.message;
-                }
+            const data = await response.json();
+            if (data.status === "success") {
+                window.location.href = '/dashboard/';
             } else {
-                console.log("No redirect result found yet.");
-                resultDiv.innerText = "Please sign in.";
+                resultDiv.innerText = "Django Error: " + data.message;
             }
         } catch (error) {
-            console.error("Redirect Error caught:", error.code, error.message);
-            resultDiv.innerText = "Error: " + error.message;
+            console.error("Auth Error (Popup):", error.code, error.message);
+            googleBtn.style.pointerEvents = 'auto';
+            resultDiv.innerText = "Error: " + error.code;
         }
-    }
-
-    handleRedirectResult();
-
-    // 5. THE BUTTON CLICK
-    loginBtn.addEventListener('click', (e) => {
-        e.preventDefault(); // Prevents the browser from navigating or submitting a form
-        resultDiv.innerText = "Leaving for Google...";
-        signInWithRedirect(auth, provider);
-    });
+    };
 </script>
 </body>
 </html>

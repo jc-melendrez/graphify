@@ -2,41 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Graphify</title>
+    <title>Dashboard - Graphify</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
-        .login-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
-        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background-color: #4285F4; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+        .logout-btn { display: inline-block; margin-top: 20px; padding: 10px 20px; font-size: 14px; cursor: pointer; background-color: #dc3545; color: white; border: none; border-radius: 6px; font-weight: bold; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h2>Welcome to Graphify</h2>
-        <p>Please sign in to continue</p>
-        <button id="google-login">Sign in with Google</button>
+    <div class="card">
+        <h2>Welcome, {{ user.first_name|default:user.username }}!</h2>
+        <p>You have successfully signed in and a Django session has been created.</p>
+        <p>You can now refresh this page or navigate away and come back without being logged out.</p>
+        <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
     </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithRedirect, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyA19Dx9DDTw-u_GLXdwxLVjqi6mtbqY08A",
-            authDomain: "graphify-e759e.firebaseapp.com",
-            projectId: "graphify-e759e",
-            storageBucket: "graphify-e759e.firebasestorage.app",
-            messagingSenderId: "55983034598",
-            appId: "1:55983034598:web:af8020e0f8920b697ceb27"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
-        document.getElementById('google-login').onclick = () => {
-            // This starts the trip to Google
-            signInWithRedirect(auth, provider);
-        };
-    </script>
 </body>
 </html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Account - Graphify</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        h2 { margin-bottom: 20px; }
+        form { display: flex; flex-direction: column; }
+        input { padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; }
+        .form-btn { padding: 12px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        .messages { list-style: none; padding: 0; margin: 0 0 15px 0; }
+        .messages .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; }
+        .login-link { margin-top: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Create an Account</h2>
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="password" name="password_conf" placeholder="Confirm Password" required>
+            <button type="submit" class="form-btn">Register</button>
+        </form>
+        <div class="login-link">
+            <p>Already have an account? <a href="{% url 'login' %}">Sign In</a></p>
+        </div>
+    </div>
+</body>
+</html>
