@@ -10,6 +10,7 @@ cryptography==46.0.7
 Django==6.0.4
 django-cors-headers==4.9.0
 firebase_admin==7.4.0
+git-filter-repo==2.47.0
 google-api-core==2.30.3
 google-auth==2.49.2
 google-cloud-core==2.5.1
@@ -47,3 +48,4 @@ urllib3==2.6.3
 uvicorn==0.44.0
 watchfiles==1.1.1
 websockets==16.0
+django-ratelimit==4.1.0
