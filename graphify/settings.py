@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'corsheaders',
+    'django_ratelimit',
 ]
 
 MIDDLEWARE = [
@@ -156,6 +157,24 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Cache Configuration for Rate Limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'graphify-cache',
+    }
+}
+
+# Rate Limiting Configuration
+RATELIMIT_ENABLE = True
+
+
+#for development lang
+SILENCED_SYSTEM_CHECKS = [
+    'django_ratelimit.E003',
+    'django_ratelimit.W001',
+]
 
 
 # Password validation
