@@ -164,20 +164,12 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-def github_login(request):
-    """Firebase handles GitHub OAuth directly - no custom callback needed."""
-    return JsonResponse({
-        "status": "info",
-        "message": "Use Firebase SDK's signInWithPopup(githubProvider) on client-side"
-    })
-
-
 @csrf_exempt
 @ratelimit(key='ip', rate='20/h', method='POST')
-def github_callback(request):
+def github_login(request):
     """
     Handles Firebase GitHub authentication token verification.
-    Firebase console now manages GitHub OAuth directly.
+    Firebase console manages GitHub OAuth directly.
     """
     if request.method == "POST":
         try:
@@ -187,14 +179,14 @@ def github_callback(request):
             if not id_token:
                 return JsonResponse({"status": "error", "message": "ID token not provided."}, status=400)
 
-            # Verify the Firebase token (works for GitHub, Google, etc.)
+            # Verify the Firebase token
             decoded_token = auth.verify_id_token(id_token)
             firebase_uid = decoded_token.get('uid')
             email = decoded_token.get('email')
             name = decoded_token.get('name', '')
 
             if not email:
-                return JsonResponse({"status": "error", "message": "Email not provided."}, status=400)
+                return JsonResponse({"status": "error", "message": "Email not provided by GitHub."}, status=400)
 
             # Get or create Django user for session management
             django_user, created = User.objects.get_or_create(
@@ -222,6 +214,7 @@ def github_callback(request):
                 'last_login': firestore.SERVER_TIMESTAMP
             }, merge=True)
 
+            # Log the user into Django
             login(request, django_user)
             return JsonResponse({"status": "success"})
 
@@ -232,11 +225,10 @@ def github_callback(request):
             logging.warning("Expired GitHub ID token (non-sensitive)")
             return JsonResponse({"status": "error", "message": "Authentication token expired. Please try again."}, status=401)
         except Exception as e:
-            logging.error(f"GitHub verification error (non-sensitive)")
+            logging.error(f"GitHub verification error (non-sensitive): {str(e)}")
             return JsonResponse({"status": "error", "message": "Authentication failed. Please try again."}, status=401)
 
     return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
-
 @csrf_protect
 @ratelimit(key='ip', rate='5/h', method='POST')
 def register_view(request):
