@@ -30,14 +30,14 @@ def login_page(request):
             user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('dashboard')
+                return redirect('dashie')
             else:
                 messages.error(request, 'Invalid credentials. Please try again.')
         except auth.UserNotFoundError:
             user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('dashboard')
+                return redirect('dashie')
             else:
                 messages.warning(request, f'No account found for {email}. Please register.')
                 return redirect('register')
@@ -286,3 +286,10 @@ def otp_verify_view(request):
             messages.error(request, "Invalid OTP. Please try again.")
 
     return render(request, 'main/verify_otp.html', {'email': reg_data.get('email')})
+
+
+def dashie(request):
+    return render(request, "main/dashie.html")
+
+def landing_page(request):
+    return render(request, 'main/landing_page.html')

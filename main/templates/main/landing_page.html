@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphify — Visualize Any Data Instantly</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #07080d;
+            --bg-elevated: #0d0f16;
+            --card: #12151f;
+            --card-hover: #181c2a;
+            --border: #1e2233;
+            --border-light: #2a2f44;
+            --fg: #eaebed;
+            --fg-secondary: #a8abb8;
+            --muted: #5f6478;
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
+            --accent-soft: rgba(245, 158, 11, 0.06);
+            --accent-glow: rgba(245, 158, 11, 0.15);
+            --accent-ring: rgba(245, 158, 11, 0.3);
+            --teal: #14b8a6;
+            --rose: #f43f5e;
+            --violet: #8b5cf6;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --font: 'Space Grotesk', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; font-size: 16px; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--fg);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+        /* ── Nav ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; height: 64px;
+            background: rgba(7, 8, 13, 0.7);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.4s ease, background 0.4s ease;
+        }
+        nav.scrolled {
+            border-bottom-color: var(--border);
+            background: rgba(7, 8, 13, 0.92);
+        }
+        .nav-logo {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 700; font-size: 1.25rem; letter-spacing: -0.03em;
+            text-decoration: none; color: var(--fg);
+        }
+        .nav-logo i { color: var(--accent); font-size: 1.15rem; }
+        .nav-links { display: flex; align-items: center; gap: 32px; }
+        .nav-links a {
+            text-decoration: none; color: var(--fg-secondary);
+            font-size: 0.88rem; font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--fg); }
+        .btn-launch {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 20px; border: none; border-radius: var(--radius-sm);
+            background: var(--accent); color: #000;
+            font-family: var(--font); font-weight: 600; font-size: 0.88rem;
+            text-decoration: none; cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-launch:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+
+        .btn-outline {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 28px; border: 1.5px solid var(--border-light);
+            border-radius: var(--radius-sm); background: transparent;
+            color: var(--fg-secondary); font-family: var(--font);
+            font-weight: 600; font-size: 0.95rem;
+            text-decoration: none; cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-outline:hover { border-color: var(--fg-secondary); color: var(--fg); background: rgba(255,255,255,0.03); }
+
+        .btn-solid {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 28px; border: none;
+            border-radius: var(--radius-sm);
+            background: var(--accent); color: #000;
+            font-family: var(--font); font-weight: 700; font-size: 0.95rem;
+            text-decoration: none; cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-solid:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 6px 30px var(--accent-glow); }
+
+        /* ── Hero ── */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 120px 40px 80px;
+            overflow: hidden;
+        }
+        .hero-bg {
+            position: absolute; inset: 0; z-index: 0; overflow: hidden;
+        }
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 80px 80px;
+            opacity: 0.25;
+            mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 20%, transparent 70%);
+        }
+        .hero-blob {
+            position: absolute; border-radius: 50%; filter: blur(100px);
+            animation: blobFloat 12s ease-in-out infinite;
+        }
+        .hero-blob--1 {
+            width: 500px; height: 500px; top: -10%; left: 20%;
+            background: radial-gradient(circle, rgba(245,158,11,0.18), transparent 70%);
+            animation-delay: 0s;
+        }
+        .hero-blob--2 {
+            width: 400px; height: 400px; top: 20%; right: 10%;
+            background: radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%);
+            animation-delay: -4s; animation-duration: 15s;
+        }
+        .hero-blob--3 {
+            width: 350px; height: 350px; bottom: 5%; left: 5%;
+            background: radial-gradient(circle, rgba(20,184,166,0.1), transparent 70%);
+            animation-delay: -8s; animation-duration: 18s;
+        }
+        @keyframes blobFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.05); }
+            66% { transform: translate(-20px, 15px) scale(0.95); }
+        }
+
+        .hero-content {
+            position: relative; z-index: 1;
+            text-align: center; max-width: 800px;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px; border-radius: 20px;
+            border: 1px solid var(--border-light);
+            background: var(--accent-soft);
+            color: var(--accent); font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 28px;
+            animation: fadeUp 0.6s ease both;
+        }
+        .hero-badge i { font-size: 0.65rem; }
+        .hero h1 {
+            font-size: clamp(2.8rem, 6vw, 4.5rem);
+            font-weight: 800; letter-spacing: -0.04em;
+            line-height: 1.08; margin-bottom: 20px;
+            animation: fadeUp 0.6s ease 0.1s both;
+        }
+        .hero h1 .accent { color: var(--accent); }
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            color: var(--fg-secondary); line-height: 1.65;
+            max-width: 600px; margin: 0 auto 36px;
+            animation: fadeUp 0.6s ease 0.2s both;
+        }
+        .hero-actions {
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            animation: fadeUp 0.6s ease 0.3s both;
+        }
+        .hero-stats {
+            display: flex; align-items: center; justify-content: center; gap: 48px;
+            margin-top: 64px;
+            animation: fadeUp 0.6s ease 0.45s both;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat-value {
+            font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+            color: var(--fg);
+            font-family: var(--mono);
+        }
+        .hero-stat-value .unit { color: var(--accent); font-size: 1.2rem; }
+        .hero-stat-label {
+            font-size: 0.78rem; color: var(--muted); margin-top: 4px;
+            text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Floating chart previews in hero ── */
+        .hero-preview {
+            position: absolute; z-index: 0;
+            border-radius: var(--radius); overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--card);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            opacity: 0;
+            animation: previewIn 0.8s ease forwards;
+        }
+        .hero-preview--1 {
+            width: 220px; height: 160px; top: 18%; right: 6%;
+            animation-delay: 0.6s;
+        }
+        .hero-preview--2 {
+            width: 180px; height: 140px; bottom: 18%; left: 4%;
+            animation-delay: 0.8s;
+        }
+        .hero-preview canvas { width: 100%; height: 100%; }
+
+        @keyframes previewIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.9); }
+            to { opacity: 0.7; transform: translateY(0) scale(1); }
+        }
+        .hero-preview:hover { opacity: 1 !important; transition: opacity 0.3s; }
+
+        /* ── Sections ── */
+        section { padding: 100px 40px; }
+        .section-header {
+            text-align: center; max-width: 600px; margin: 0 auto 64px;
+        }
+        .section-label {
+            display: inline-block; font-size: 0.72rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.12em;
+            color: var(--accent); margin-bottom: 14px;
+        }
+        .section-header h2 {
+            font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+            font-weight: 800; letter-spacing: -0.03em;
+            line-height: 1.15; margin-bottom: 16px;
+        }
+        .section-header p {
+            color: var(--fg-secondary); font-size: 1.05rem; line-height: 1.6;
+        }
+
+        /* ── Features Grid ── */
+        .features-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+            max-width: 1100px; margin: 0 auto;
+        }
+        .feature-card {
+            position: relative; padding: 32px 28px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            transition: all 0.35s ease;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0; transition: opacity 0.35s ease;
+        }
+        .feature-card:hover {
+            border-color: var(--border-light);
+            background: var(--card-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem; margin-bottom: 20px;
+        }
+        .feature-icon--amber { background: rgba(245,158,11,0.1); color: var(--accent); }
+        .feature-icon--teal  { background: rgba(20,184,166,0.1); color: var(--teal); }
+        .feature-icon--rose  { background: rgba(244,63,94,0.1);  color: var(--rose); }
+        .feature-icon--violet{ background: rgba(139,92,246,0.1); color: var(--violet); }
+        .feature-card h3 {
+            font-size: 1.05rem; font-weight: 700; margin-bottom: 10px;
+            letter-spacing: -0.01em;
+        }
+        .feature-card p {
+            font-size: 0.88rem; color: var(--fg-secondary); line-height: 1.6;
+        }
+
+        /* ── How it Works ── */
+        .steps-container {
+            display: flex; gap: 32px; max-width: 1000px; margin: 0 auto;
+            align-items: flex-start;
+        }
+        .step {
+            flex: 1; text-align: center; position: relative;
+        }
+        .step-number {
+            width: 56px; height: 56px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; font-weight: 800; margin: 0 auto 20px;
+            border: 2px solid var(--border-light);
+            background: var(--card);
+            color: var(--accent);
+            transition: all 0.3s;
+        }
+        .step:hover .step-number {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft), 0 0 30px var(--accent-glow);
+        }
+        .step-connector {
+            position: absolute; top: 28px; left: calc(50% + 36px);
+            width: calc(100% - 72px); height: 2px;
+            background: linear-gradient(90deg, var(--border-light), var(--border), var(--border-light));
+        }
+        .step:last-child .step-connector { display: none; }
+        .step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+        .step p { font-size: 0.88rem; color: var(--fg-secondary); line-height: 1.6; max-width: 260px; margin: 0 auto; }
+
+        /* ── Formats ── */
+        .formats-grid {
+            display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+            max-width: 700px; margin: 0 auto;
+        }
+        .format-card {
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 28px 36px; border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            transition: all 0.3s;
+            min-width: 140px;
+        }
+        .format-card:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            transform: translateY(-3px);
+        }
+        .format-ext {
+            font-family: var(--mono); font-size: 1.4rem; font-weight: 700;
+            color: var(--accent);
+        }
+        .format-name {
+            font-size: 0.82rem; color: var(--fg-secondary); font-weight: 500;
+        }
+
+        /* ── Chart Types Showcase ── */
+        .chart-showcase {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            max-width: 900px; margin: 0 auto;
+        }
+        .showcase-item {
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+            padding: 24px 16px; border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            transition: all 0.3s;
+        }
+        .showcase-item:hover {
+            border-color: var(--border-light);
+            background: var(--card-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+        }
+        .showcase-icon {
+            width: 48px; height: 48px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: var(--fg-secondary);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .showcase-item:hover .showcase-icon {
+            color: var(--accent); border-color: var(--accent-ring);
+            background: var(--accent-soft);
+        }
+        .showcase-label {
+            font-size: 0.85rem; font-weight: 600; color: var(--fg-secondary);
+        }
+
+        /* ── CTA Section ── */
+        .cta-section {
+            position: relative; overflow: hidden;
+        }
+        .cta-glow {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px; height: 300px;
+            background: radial-gradient(ellipse, var(--accent-glow), transparent 70%);
+            filter: blur(60px);
+            pointer-events: none;
+        }
+        .cta-box {
+            position: relative; z-index: 1;
+            max-width: 640px; margin: 0 auto; text-align: center;
+            padding: 56px 40px; border-radius: 16px;
+            border: 1px solid var(--border-light);
+            background: var(--card);
+        }
+        .cta-box h2 {
+            font-size: clamp(1.6rem, 3vw, 2.2rem);
+            font-weight: 800; letter-spacing: -0.03em;
+            margin-bottom: 14px;
+        }
+        .cta-box p {
+            color: var(--fg-secondary); font-size: 1.05rem;
+            line-height: 1.6; margin-bottom: 28px;
+        }
+        .cta-actions { display: flex; justify-content: center; gap: 12px; }
+
+        /* ── Footer ── */
+        footer {
+            padding: 32px 40px;
+            border-top: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .footer-left {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.85rem; color: var(--muted);
+        }
+        .footer-left i { color: var(--accent); }
+        .footer-links { display: flex; gap: 24px; }
+        .footer-links a {
+            font-size: 0.82rem; color: var(--muted);
+            text-decoration: none; transition: color 0.2s;
+        }
+        .footer-links a:hover { color: var(--fg-secondary); }
+
+        /* ── Scroll Reveal ── */
+        .reveal {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1; transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.08s; }
+        .reveal-delay-2 { transition-delay: 0.16s; }
+        .reveal-delay-3 { transition-delay: 0.24s; }
+        .reveal-delay-4 { transition-delay: 0.32s; }
+        .reveal-delay-5 { transition-delay: 0.40s; }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            nav { padding: 0 20px; }
+            .nav-links { display: none; }
+            section { padding: 72px 20px; }
+            .features-grid { grid-template-columns: 1fr; max-width: 480px; }
+            .steps-container { flex-direction: column; align-items: center; gap: 40px; }
+            .step-connector { display: none !important; }
+            .chart-showcase { grid-template-columns: repeat(2, 1fr); }
+            .hero-stats { gap: 28px; flex-wrap: wrap; }
+            .hero-preview { display: none; }
+            .hero { padding: 100px 20px 60px; }
+            .cta-box { padding: 40px 24px; }
+            .cta-actions { flex-direction: column; align-items: center; }
+            footer { flex-direction: column; gap: 16px; text-align: center; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+            .reveal { opacity: 1; transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav id="main-nav">
+    <a href="#" class="nav-logo">
+        <i class="fa-solid fa-chart-column"></i>
+        <span>Graphify</span>
+    </a>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#charts">Charts</a>
+        <a href="#formats">Formats</a>
+    </div>
+    <a href="{% url 'login' %}" class="btn-launch">
+        Launch App <i class="fa-solid fa-arrow-right" style="font-size:0.75rem"></i>
+    </a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+    <div class="hero-bg">
+        <div class="hero-grid"></div>
+        <div class="hero-blob hero-blob--1"></div>
+        <div class="hero-blob hero-blob--2"></div>
+        <div class="hero-blob hero-blob--3"></div>
+    </div>
+
+    <!-- Floating mini-chart previews -->
+    <div class="hero-preview hero-preview--1">
+        <canvas id="preview-canvas-1"></canvas>
+    </div>
+    <div class="hero-preview hero-preview--2">
+        <canvas id="preview-canvas-2"></canvas>
+    </div>
+
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fa-solid fa-bolt"></i>
+            No sign-up required — works in your browser
+        </div>
+        <h1>Turn any data into<br><span class="accent">beautiful charts</span></h1>
+        <p>Drop a CSV, JSON, or Excel file and instantly generate publication-ready visualizations. Eight chart types, five color themes, zero friction.</p>
+        <div class="hero-actions">
+            <a href="{% url 'login' %}" class="btn-solid">
+                Start Visualizing <i class="fa-solid fa-arrow-right" style="font-size:0.8rem"></i>
+            </a>
+            <a href="#how-it-works" class="btn-outline">
+                <i class="fa-regular fa-circle-play" style="font-size:0.9rem"></i> See How It Works
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value">8<span class="unit">+</span></div>
+                <div class="hero-stat-label">Chart Types</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">10k<span class="unit">+</span></div>
+                <div class="hero-stat-label">Rows Supported</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">0<span class="unit">s</span></div>
+                <div class="hero-stat-label">Upload to Chart</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">100<span class="unit">%</span></div>
+                <div class="hero-stat-label">Client-Side</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Features ── -->
+<section id="features">
+    <div class="section-header reveal">
+        <span class="section-label">Features</span>
+        <h2>Built for speed, designed for clarity</h2>
+        <p>Everything you need to go from raw data to a polished visualization — nothing you don't.</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card reveal reveal-delay-1">
+            <div class="feature-icon feature-icon--amber">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <h3>Instant Rendering</h3>
+            <p>Your chart appears the moment you select your columns. No server round-trips, no loading spinners — pure client-side rendering powered by Google Charts.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+            <div class="feature-icon feature-icon--teal">
+                <i class="fa-solid fa-file-arrow-up"></i>
+            </div>
+            <h3>Multi-Format Support</h3>
+            <p>CSV, JSON, XLSX, and XLS files all work out of the box. Smart column detection automatically separates your labels from your numbers.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+            <div class="feature-icon feature-icon--rose">
+                <i class="fa-solid fa-palette"></i>
+            </div>
+            <h3>Five Color Themes</h3>
+            <p>From warm Sunset to cool Ocean, vibrant Neon to understated Mono — pick a palette that matches your presentation or report.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+            <div class="feature-icon feature-icon--violet">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <h3>Combo Charts</h3>
+            <p>Mix bars and lines on a single chart to compare different scales. Perfect for revenue vs. growth rate, temperature vs. precipitation, or any dual-metric story.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+            <div class="feature-icon feature-icon--amber">
+                <i class="fa-solid fa-download"></i>
+            </div>
+            <h3>PNG Export</h3>
+            <p>One click downloads your chart as a high-quality PNG. Drop it straight into a slide deck, document, or dashboard without any extra editing.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+            <div class="feature-icon feature-icon--teal">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3>Fully Private</h3>
+            <p>Your data never leaves your browser. No uploads to any server, no analytics tracking your files, no accounts storing your information. Period.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── How It Works ── -->
+<section id="how-it-works" style="background: var(--bg-elevated);">
+    <div class="section-header reveal">
+        <span class="section-label">How It Works</span>
+        <h2>Three steps to insight</h2>
+        <p>No configuration files, no API keys, no tutorials to watch first.</p>
+    </div>
+    <div class="steps-container">
+        <div class="step reveal reveal-delay-1">
+            <div class="step-number">1</div>
+            <div class="step-connector"></div>
+            <h3>Upload your file</h3>
+            <p>Drag and drop a CSV, JSON, or Excel file onto the upload zone. Data is parsed instantly in your browser.</p>
+        </div>
+        <div class="step reveal reveal-delay-2">
+            <div class="step-number">2</div>
+            <div class="step-connector"></div>
+            <h3>Pick your axes</h3>
+            <p>Select an X-axis column and check the numeric Y-axis columns you want to visualize. Choose a chart type and color theme.</p>
+        </div>
+        <div class="step reveal reveal-delay-3">
+            <div class="step-number">3</div>
+            <div class="step-connector"></div>
+            <h3>Export and share</h3>
+            <p>Download your chart as a PNG image, or toggle the data table to inspect the underlying numbers.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── Chart Types ── -->
+<section id="charts">
+    <div class="section-header reveal">
+        <span class="section-label">Chart Types</span>
+        <h2>Eight visualizations, one interface</h2>
+        <p>Switch between chart types in a single click. The same data, completely different stories.</p>
+    </div>
+    <div class="chart-showcase">
+        <div class="showcase-item reveal reveal-delay-1">
+            <div class="showcase-icon"><i class="fa-solid fa-chart-column"></i></div>
+            <span class="showcase-label">Column</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-2">
+            <div class="showcase-icon"><i class="fa-solid fa-chart-bar"></i></div>
+            <span class="showcase-label">Bar</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-3">
+            <div class="showcase-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <span class="showcase-label">Line</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-4">
+            <div class="showcase-icon"><i class="fa-solid fa-chart-area"></i></div>
+            <span class="showcase-label">Area</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-1">
+            <div class="showcase-icon"><i class="fa-solid fa-chart-pie"></i></div>
+            <span class="showcase-label">Pie</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-2">
+            <div class="showcase-icon"><i class="fa-solid fa-circle-dot"></i></div>
+            <span class="showcase-label">Donut</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-3">
+            <div class="showcase-icon"><i class="fa-solid fa-braille"></i></div>
+            <span class="showcase-label">Scatter</span>
+        </div>
+        <div class="showcase-item reveal reveal-delay-4">
+            <div class="showcase-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <span class="showcase-label">Combo</span>
+        </div>
+    </div>
+</section>
+
+<!-- ── Formats ── -->
+<section id="formats" style="background: var(--bg-elevated);">
+    <div class="section-header reveal">
+        <span class="section-label">Supported Formats</span>
+        <h2>Bring your data as-is</h2>
+        <p>No need to convert or reformat. Drop the file you already have.</p>
+    </div>
+    <div class="formats-grid">
+        <div class="format-card reveal reveal-delay-1">
+            <span class="format-ext">.CSV</span>
+            <span class="format-name">Comma-Separated Values</span>
+        </div>
+        <div class="format-card reveal reveal-delay-2">
+            <span class="format-ext">.JSON</span>
+            <span class="format-name">JavaScript Object Notation</span>
+        </div>
+        <div class="format-card reveal reveal-delay-3">
+            <span class="format-ext">.XLSX</span>
+            <span class="format-name">Excel Workbook</span>
+        </div>
+        <div class="format-card reveal reveal-delay-4">
+            <span class="format-ext">.XLS</span>
+            <span class="format-name">Legacy Excel</span>
+        </div>
+    </div>
+</section>
+
+<!-- ── CTA ── -->
+<section id="launch" class="cta-section">
+    <div class="cta-glow"></div>
+    <div class="cta-box reveal">
+        <h2>Ready to see your data differently?</h2>
+        <p>No account, no cost, no data leaving your machine. Just drop a file and go.</p>
+        <div class="cta-actions">
+            <a href="{% url 'login' %}" class="btn-solid" id="cta-launch-btn">
+                Open Graphify <i class="fa-solid fa-arrow-right" style="font-size:0.8rem"></i>
+            </a>
+            <a href="#features" class="btn-outline">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+    <div class="footer-left">
+        <i class="fa-solid fa-chart-column"></i>
+        <span>Graphify — Client-side data visualization</span>
+    </div>
+    <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#charts">Charts</a>
+        <a href="#formats">Formats</a>
+    </div>
+</footer>
+
+<script>
+/* ──────────────────────────────────────────────
+   Scroll-based nav styling
+   ────────────────────────────────────────────── */
+const nav = document.getElementById('main-nav');
+window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 30);
+}, { passive: true });
+
+/* ──────────────────────────────────────────────
+   Scroll Reveal (IntersectionObserver)
+   ────────────────────────────────────────────── */
+const revealEls = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            revealObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+revealEls.forEach(el => revealObserver.observe(el));
+
+/* ──────────────────────────────────────────────
+   Hero Preview Canvas Animations
+   ────────────────────────────────────────────── */
+function drawBarPreview(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width, h = rect.height;
+    const colors = ['#f59e0b','#ef4444','#f97316','#eab308','#dc2626','#fb923c'];
+    const barCount = 7;
+    const barW = Math.max(1, (w - 40) / barCount - 6);
+    const gap = 6;
+    const startX = 20;
+    const maxH = h - 40;
+    const baseY = h - 16;
+
+    let progress = 0;
+    function animate() {
+        progress = Math.min(progress + 0.025, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Gridlines
+        ctx.strokeStyle = '#1e2233';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 4; i++) {
+            const y = baseY - (maxH / 4) * (i + 1);
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(w - 10, y);
+            ctx.stroke();
+        }
+
+        // Bars
+        const heights = [0.65, 0.9, 0.45, 0.78, 0.55, 0.85, 0.7];
+        for (let i = 0; i < barCount; i++) {
+            const x = startX + i * (barW + gap);
+            const barH = maxH * heights[i] * ease;
+            const y = baseY - barH;
+
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            const r = Math.min(3, barW / 2);
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + barW - r, y);
+            ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+            ctx.lineTo(x + barW, baseY);
+            ctx.lineTo(x, baseY);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        if (progress < 1) requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+function drawLinePreview(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width, h = rect.height;
+    const pad = { top: 16, right: 12, bottom: 16, left: 12 };
+    const plotW = w - pad.left - pad.right;
+    const plotH = h - pad.top - pad.bottom;
+
+    const points1 = [0.3, 0.55, 0.4, 0.7, 0.6, 0.85, 0.75, 0.9];
+    const points2 = [0.15, 0.3, 0.45, 0.35, 0.55, 0.5, 0.65, 0.7];
+
+    let progress = 0;
+    function animate() {
+        progress = Math.min(progress + 0.02, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const visibleCount = Math.floor(ease * points1.length) + (ease < 1 ? 1 : 0);
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Grid
+        ctx.strokeStyle = '#1e2233';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 4; i++) {
+            const y = pad.top + (plotH / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(pad.left, y);
+            ctx.lineTo(w - pad.right, y);
+            ctx.stroke();
+        }
+
+        function drawLine(points, color, fillColor) {
+            if (visibleCount < 2) return;
+            const step = plotW / (points.length - 1);
+
+            // Fill
+            ctx.beginPath();
+            ctx.moveTo(pad.left, pad.top + plotH * (1 - points[0]));
+            for (let i = 1; i < visibleCount; i++) {
+                const x = pad.left + step * i;
+                const y = pad.top + plotH * (1 - points[i]);
+                const px = pad.left + step * (i - 1);
+                const py = pad.top + plotH * (1 - points[i - 1]);
+                const cpx = (px + x) / 2;
+                ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+            }
+            const lastX = pad.left + step * (visibleCount - 1);
+            ctx.lineTo(lastX, pad.top + plotH);
+            ctx.lineTo(pad.left, pad.top + plotH);
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            // Stroke
+            ctx.beginPath();
+            ctx.moveTo(pad.left, pad.top + plotH * (1 - points[0]));
+            for (let i = 1; i < visibleCount; i++) {
+                const x = pad.left + step * i;
+                const y = pad.top + plotH * (1 - points[i]);
+                const px = pad.left + step * (i - 1);
+                const py = pad.top + plotH * (1 - points[i - 1]);
+                const cpx = (px + x) / 2;
+                ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Dots
+            for (let i = 0; i < visibleCount; i++) {
+                const x = pad.left + step * i;
+                const y = pad.top + plotH * (1 - points[i]);
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+        }
+
+        drawLine(points1, '#14b8a6', 'rgba(20,184,166,0.1)');
+        drawLine(points2, '#8b5cf6', 'rgba(139,92,246,0.08)');
+
+        if (progress < 1) requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+/* ──────────────────────────────────────────────
+   CTA Button — open the app in a new tab
+   ────────────────────────────────────────────── */
+
+/* Simple toast for the landing page */
+function toast(msg, type) {
+    const c = document.createElement('div');
+    c.style.cssText = `
+        position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+        padding:12px 24px; border-radius:8px; font-size:0.88rem;
+        font-family:'Space Grotesk',system-ui,sans-serif;
+        background:#161a25; border:1px solid #2e3448; color:#e4e5ea;
+        box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:9999;
+        animation: fadeUp 0.3s ease both; max-width:500px; text-align:center;
+    `;
+    c.textContent = msg;
+    document.body.appendChild(c);
+    setTimeout(() => { c.style.opacity = '0'; c.style.transition = 'opacity 0.3s'; setTimeout(() => c.remove(), 350); }, 4000);
+}
+
+/* ──────────────────────────────────────────────
+   Init canvas previews after layout settles
+   ────────────────────────────────────────────── */
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const c1 = document.getElementById('preview-canvas-1');
+        const c2 = document.getElementById('preview-canvas-2');
+        if (c1) drawBarPreview(c1);
+        if (c2) drawLinePreview(c2);
+    }, 100);
+});
+
+/* Redraw on resize */
+window.addEventListener('resize', debounce(() => {
+    const c1 = document.getElementById('preview-canvas-1');
+    const c2 = document.getElementById('preview-canvas-2');
+    if (c1) drawBarPreview(c1);
+    if (c2) drawLinePreview(c2);
+}, 300));
+
+function debounce(fn, ms) { let t; return function(...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); }; }
+</script>
+</body>
+</html>
