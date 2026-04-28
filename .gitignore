@@ -5,6 +5,8 @@
 serviceAccountKey.json
 
 __pycache__/
+
+main/__pycache__/
 *.pyc
 *.pyo
 *.pyd
