@@ -81,9 +81,16 @@
             resultDiv.innerText = "Authenticated! Syncing with Django...";
             const idToken = await user.getIdToken();
             
+            // 1. Grab the CSRF token from the hidden input Django rendered in your form
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
             const response = await fetch(backendEndpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // 2. Add the CSRF token to the headers
+                    'X-CSRFToken': csrfToken 
+                },
                 body: JSON.stringify({ id_token: idToken })
             });
 
@@ -92,15 +99,14 @@
                 window.location.href = '/dashboard/';
             } else {
                 resultDiv.innerText = "Django Error: " + data.message;
-                btnElement.style.pointerEvents = 'auto'; // Re-enable button on failure
+                btnElement.style.pointerEvents = 'auto'; 
             }
         } catch (error) {
-            console.error("Auth Error (Popup):", error.code, error.message);
-            btnElement.style.pointerEvents = 'auto'; // Re-enable button on failure
-            resultDiv.innerText = "Error: " + error.code;
+            console.error("Auth Error:", error);
+            btnElement.style.pointerEvents = 'auto';
+            resultDiv.innerText = "Error: " + (error.code || "Unknown error");
         }
     }
-
     // Attach click events pointing to your Django backend URLs
     googleBtn.onclick = () => handleSocialLogin(googleProvider, googleBtn, '/auth/google/');
     githubBtn.onclick = () => handleSocialLogin(githubProvider, githubBtn, '/auth/github/'); 
