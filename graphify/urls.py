@@ -16,9 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from main import urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include(urls)),
+    # This links your new authentication app to the /auth/ path
+    path('auth/', include('authentication.urls')), 
+    # This keeps your main app routing from the root path
+    path('', include('main.urls')),
 ]
