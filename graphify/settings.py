@@ -74,7 +74,8 @@ if not firebase_admin._apps:
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
+
 
 ALLOWED_HOSTS = [
     'private-mustiness-babied.ngrok-free.dev',
@@ -82,12 +83,14 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'graphify-bgcw.onrender.com',
     'graphify-io.onrender.com',
+    'eloquent-flagpole-resupply.ngrok-free.dev'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://private-mustiness-babied.ngrok-free.dev',
     'https://graphify-bgcw.onrender.com',
     'https://graphify-io.onrender.com',
+    'https://eloquent-flagpole-resupply.ngrok-free.dev/'
 ]
 
 # settings.py

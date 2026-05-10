@@ -2,22 +2,196 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - Graphify</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; background: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-        h2 { margin-bottom: 20px; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 100vh;
+            background: #07080d;
+            color: #e4e5ea;
+            position: relative; overflow: hidden;
+            padding: 24px;
+        }
+
+        /* ── Background atmosphere ── */
+        body::before {
+            content: ''; position: fixed; inset: 0; z-index: 0;
+            background-image:
+                linear-gradient(#1e2233 1px, transparent 1px),
+                linear-gradient(90deg, #1e2233 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.15;
+            mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, black 10%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, black 10%, transparent 70%);
+            pointer-events: none;
+        }
+        body::after {
+            content: ''; position: fixed; z-index: 0;
+            width: 500px; height: 400px; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse, rgba(245,158,11,0.08), transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+        }
+
+        /* ── Logo ── */
+        .brand {
+            position: relative; z-index: 1;
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 32px;
+            animation: fadeUp 0.5s ease both;
+        }
+        .brand i { color: #f59e0b; font-size: 1.35rem; }
+        .brand span { font-weight: 700; font-size: 1.35rem; letter-spacing: -0.03em; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Card ── */
+        .card {
+            position: relative; z-index: 1;
+            background: #161a25;
+            padding: 36px 32px 32px;
+            border-radius: 14px;
+            border: 1px solid #242938;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.02) inset;
+            width: 100%; max-width: 400px;
+            text-align: center;
+            animation: fadeUp 0.5s ease 0.08s both;
+        }
+        .card h2 {
+            font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em;
+            margin-bottom: 6px;
+        }
+        .card-subtitle {
+            font-size: 0.88rem; color: #6b7280; margin-bottom: 28px;
+        }
+
+        /* ── Messages ── */
+        .messages {
+            list-style: none; padding: 0;
+            margin: 0 0 20px 0;
+        }
+        .messages li {
+            padding: 12px 14px; border-radius: 8px;
+            font-size: 0.85rem; font-weight: 500;
+            text-align: left;
+            animation: fadeUp 0.3s ease both;
+        }
+        .messages .error {
+            color: #fca5a5;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+        .messages .warning {
+            color: #fde68a;
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.2);
+        }
+        .messages .success {
+            color: #86efac;
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.2);
+        }
+
+        /* ── Form ── */
         form { display: flex; flex-direction: column; }
-        input { padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; }
-        .form-btn { padding: 12px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
-        .messages { list-style: none; padding: 0; margin: 0 0 15px 0; }
-        .messages .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; }
-        .login-link { margin-top: 20px; font-size: 14px; }
+        .input-group {
+            position: relative; margin-bottom: 16px;
+        }
+        .input-group i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #4b5563; font-size: 0.88rem;
+            transition: color 0.2s;
+            pointer-events: none;
+        }
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            width: 100%; padding: 13px 14px 13px 42px;
+            background: #0d0f16;
+            border: 1px solid #242938;
+            border-radius: 10px;
+            color: #e4e5ea;
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input::placeholder { color: #4b5563; }
+        input:focus {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+        }
+        .input-group:has(input:focus) i { color: #f59e0b; }
+
+        .form-btn {
+            width: 100%; padding: 13px;
+            font-size: 0.92rem; font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-weight: 700; cursor: pointer;
+            background: #22c55e; color: #000;
+            border: none; border-radius: 10px;
+            transition: all 0.25s;
+            margin-top: 4px;
+        }
+        .form-btn:hover {
+            background: #16a34a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(34,197,94,0.2);
+        }
+        .form-btn:active { transform: translateY(0); }
+
+        /* ── Login Link ── */
+        .login-link {
+            margin-top: 20px; font-size: 0.85rem; color: #6b7280;
+        }
+        .login-link a {
+            color: #f59e0b; text-decoration: none; font-weight: 600;
+            transition: color 0.2s;
+        }
+        .login-link a:hover { color: #fbbf24; }
+
+        /* ── Footer note ── */
+        .footer-note {
+            position: relative; z-index: 1;
+            margin-top: 28px; font-size: 0.75rem;
+            color: #3b3f50; text-align: center;
+            animation: fadeUp 0.5s ease 0.16s both;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .card { padding: 28px 20px 24px; }
+            .card h2 { font-size: 1.3rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <div class="brand">
+        <i class="fa-solid fa-chart-column"></i>
+        <span>Graphify</span>
+    </div>
+
     <div class="card">
         <h2>Create an Account</h2>
+        <p class="card-subtitle">Get started with DataLens in seconds</p>
+
         {% if messages %}
         <ul class="messages">
             {% for message in messages %}
@@ -25,16 +199,29 @@
             {% endfor %}
         </ul>
         {% endif %}
+
         <form method="post">
             {% csrf_token %}
-            <input type="email" name="email" placeholder="Email Address" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="password" name="password_conf" placeholder="Confirm Password" required>
+            <div class="input-group">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" name="email" placeholder="Email Address" required>
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="password_conf" placeholder="Confirm Password" required>
+            </div>
             <button type="submit" class="form-btn">Register</button>
         </form>
+
         <div class="login-link">
             <p>Already have an account? <a href="{% url 'login' %}">Sign In</a></p>
         </div>
     </div>
+
+    <div class="footer-note">Client-side data visualization</div>
 </body>
 </html>

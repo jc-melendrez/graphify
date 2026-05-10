@@ -41,7 +41,7 @@ def validate_password_strength(password):
 def login_page(request):
     """Handles both displaying the login page and processing login attempts."""
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('dashie')
 
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -102,7 +102,7 @@ def login_page(request):
             )
             
             login(request, django_user)
-            return redirect('dashboard')
+            return redirect('dashie')
             
         except auth.UserNotFoundError:
             messages.error(request, f'No account found for {email}. Please register.')
@@ -380,7 +380,7 @@ def otp_verify_view(request):
             
             # Log in
             login(request, django_user)
-            return redirect('dashboard')
+            return redirect('dashie')
                 
         except Exception as e:
             logging.error(f"Activation error: {str(e)}")
