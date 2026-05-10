@@ -86,6 +86,7 @@ ALLOWED_HOSTS = [
     'eloquent-flagpole-resupply.ngrok-free.dev'
 ]
 
+
 CSRF_TRUSTED_ORIGINS = [
     'https://private-mustiness-babied.ngrok-free.dev',
     'https://graphify-bgcw.onrender.com',
