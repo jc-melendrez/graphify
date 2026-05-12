@@ -75,6 +75,82 @@
             transition: all 0.2s;
         }
         .btn-ghost:hover { border-color: var(--error); color: var(--error); background: rgba(239,68,68,0.06); }
+        
+        /* ── Profile Dropdown ── */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .profile-menu-container {
+            position: relative;
+        }
+        .profile-trigger {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--fg-secondary);
+        }
+        .profile-trigger:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--card-hover);
+        }
+        .profile-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 240px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+            animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .dropdown-header {
+            padding: 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+        }
+        .user-name { font-weight: 600; font-size: 0.95rem; color: var(--fg); display: block; }
+        .user-email { font-size: 0.8rem; color: var(--muted); display: block; margin-top: 2px; }
+        .dropdown-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--fg-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .dropdown-item:hover { background: var(--card-hover); color: var(--fg); }
+        .dropdown-item i { width: 16px; font-size: 0.9rem; color: var(--muted); }
+        .dropdown-item:hover i { color: var(--accent); }
+        .dropdown-item.logout:hover { color: var(--error); }
+        .dropdown-item.logout:hover i { color: var(--error); }
+        .dropdown-divider { height: 1px; background: var(--border); }
 
         .btn-primary {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -362,9 +438,33 @@
         <i class="fa-solid fa-chart-column"></i>
         <span>Graphify</span>
     </div>
-    <button class="btn-ghost" id="btn-clear" style="display:none">
-        <i class="fa-solid fa-xmark"></i> Clear All
-    </button>
+    <div class="header-actions">
+        <button class="btn-ghost" id="btn-clear" style="display:none">
+            <i class="fa-solid fa-xmark"></i> Clear All
+        </button>
+        
+        <div class="profile-menu-container">
+            <button class="profile-trigger" id="profile-trigger" title="Account">
+                <i class="fa-solid fa-user"></i>
+            </button>
+            <div class="profile-dropdown" id="profile-dropdown">
+                <div class="dropdown-header">
+                    <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                    <span class="user-email">{{ user.email }}</span>
+                </div>
+                <a href="#" class="dropdown-item">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+                <a href="#" class="dropdown-item">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Usage History
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="{% url 'logout' %}" class="dropdown-item logout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
 </header>
 
 <main>
@@ -1019,6 +1119,22 @@ function clearAll() {
 document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
+
+    // Profile Dropdown logic
+    const profileTrigger = document.getElementById('profile-trigger');
+    const profileDropdown = document.getElementById('profile-dropdown');
+
+    profileTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = profileDropdown.style.display === 'flex';
+        profileDropdown.style.display = isVisible ? 'none' : 'flex';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!profileDropdown.contains(e.target) && e.target !== profileTrigger) {
+            profileDropdown.style.display = 'none';
+        }
+    });
 
     // Click to upload
     dropZone.addEventListener('click', () => fileInput.click());
