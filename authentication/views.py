@@ -38,8 +38,15 @@ def validate_password_strength(password):
 # --- Views ---
 
 @csrf_protect
-@ratelimit(key='ip', rate='10/h', method='POST')
+@ratelimit(key='ip', rate='10/h', method='POST',block=False)
 def login_page(request):
+
+    if getattr(request, 'limited', False):
+        messages.error(request, 'Too many login attempts. Please try again in an hour.')
+        return render(request, 'authentication/login.html', {
+            'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
+        })
+
     """Handles both displaying the login page and processing login attempts."""
     if request.user.is_authenticated:
         return redirect('dashie')
@@ -189,8 +196,12 @@ def otp_verify_view(request):
     return render(request, 'authentication/verify_otp.html', {'email': reg_data.get('email')})
     
 @csrf_exempt
-@ratelimit(key='ip', rate='20/h', method='POST')
+@ratelimit(key='ip', rate='10/h', method='POST', block=False)
 def google_login(request):
+
+    if getattr(request, 'limited', False):
+        return JsonResponse({"status": "error", "message": "Too many login attempts. Please try again later."}, status=429)
+
     """Handles Google OAuth authentication via Firebase - SECURE VERSION."""
     if request.method == "POST":
         try:
@@ -250,8 +261,12 @@ def logout_view(request):
 
 
 @csrf_exempt
-@ratelimit(key='ip', rate='20/h', method='POST')
+@ratelimit(key='ip', rate='10/h', method='POST', block=False)
 def github_login(request):
+
+    if getattr(request, 'limited', False):
+        return JsonResponse({"status": "error", "message": "Too many login attempts. Please try again later."}, status=429)
+
     """Handles Firebase GitHub authentication token verification."""
     if request.method == "POST":
         try:
@@ -306,8 +321,11 @@ def github_login(request):
 
 
 @csrf_protect
-@ratelimit(key='ip', rate='5/h', method='POST')
+@ratelimit(key='ip', rate='5/h', method='POST', block=False)
 def register_view(request):
+    if getattr(request, 'limited', False):
+        messages.error(request, 'Too many registration attempts. Please try again later.')
+        return render(request, 'authentication/register.html')
     """Handles user registration and sending OTP - MAXIMUM SECURITY VERSION."""
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
