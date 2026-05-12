@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 import os
 
@@ -16,6 +17,12 @@ class DatasetStorage(FileSystemStorage):
 class Dataset(models.Model):
     """Model to store uploaded dataset files"""
     id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='datasets',
+        help_text="User who owns this dataset"
+    )
     name = models.CharField(max_length=255, help_text="Dataset name")
     file = models.FileField(
         upload_to='datasets/',

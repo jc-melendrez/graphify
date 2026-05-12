@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -25,12 +25,12 @@ class DatasetViewSet(viewsets.ModelViewSet):
     """ViewSet for Dataset CRUD operations"""
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
-    permission_classes = [AllowAny]  # Change to IsAuthenticated for Firebase auth
+    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def get_queryset(self):
-        """Get all datasets ordered by creation date"""
-        return Dataset.objects.all().order_by('-created_at')
+        """Get datasets owned by the current user"""
+        return Dataset.objects.filter(user=self.request.user).order_by('-created_at')
     
     def perform_create(self, serializer):
         """Create a new dataset with file processing"""
@@ -49,7 +49,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError("Only CSV and Excel files are allowed")
         
         # Create dataset with file type
-        serializer.save(file_type=file_type)
+        serializer.save(file_type=file_type, user=self.request.user)
     
     @action(detail=True, methods=['get'], url_path='graph')
     def graph(self, request, pk=None):
