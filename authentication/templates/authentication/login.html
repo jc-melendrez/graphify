@@ -296,42 +296,37 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    // Imported GithubAuthProvider alongside GoogleAuthProvider
-    import { getAuth, signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, fetchSignInMethodsForEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = JSON.parse('{{ firebase_config|safe }}');
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     
-    // Initialize both providers
     const googleProvider = new GoogleAuthProvider();
     const githubProvider = new GithubAuthProvider();
+    githubProvider.addScope('user:email'); // Ensures GitHub returns the email
 
     const googleBtn = document.getElementById('google-login-icon');
     const githubBtn = document.getElementById('github-login-icon');
     const resultDiv = document.getElementById('result');
 
-    // Reusable login function for both Google and GitHub
     async function handleSocialLogin(provider, btnElement, backendEndpoint) {
         btnElement.style.pointerEvents = 'none';
         resultDiv.innerText = "Signing in...";
 
         try {
+            // Using Popup instead of Redirect for better GitHub flow
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
             
             resultDiv.innerText = "Authenticated! Syncing with Django...";
             const idToken = await user.getIdToken();
-            
-            // 1. Grab the CSRF token from the hidden input Django rendered in your form
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
             const response = await fetch(backendEndpoint, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    // 2. Add the CSRF token to the headers
                     'X-CSRFToken': csrfToken 
                 },
                 body: JSON.stringify({ id_token: idToken })
@@ -341,18 +336,28 @@
             if (data.status === "success") {
                 window.location.href = '/dashie/';
             } else {
-                resultDiv.innerText = "Django Error: " + data.message;
+                resultDiv.innerHTML = `<span style="color: #dc3545; font-weight: bold;">Django Error: ${data.message}</span>`;
                 btnElement.style.pointerEvents = 'auto'; 
             }
         } catch (error) {
             console.error("Auth Error:", error);
             btnElement.style.pointerEvents = 'auto';
-            resultDiv.innerText = "Error: " + (error.code || "Unknown error");
+            
+            // THE FIX: Updated error handling that accounts for Email Enumeration Protection
+            if (error.code === 'auth/account-exists-with-different-credential') {
+                resultDiv.innerHTML = `
+                    <span style="color: #dc3545; font-weight: bold; display: block; margin-top: 10px;">
+                        This email is already secured by a trusted provider. <br>
+                        Please sign in using Google or Email/Password.
+                    </span>`;
+            } else {
+                resultDiv.innerHTML = `<span style="color: #dc3545; font-weight: bold;">Error: ${error.message || "Authentication failed."}</span>`;
+            }
         }
     }
-    // Attach click events pointing to your Django backend URLs
+
     googleBtn.onclick = () => handleSocialLogin(googleProvider, googleBtn, '/auth/google/');
-    githubBtn.onclick = () => handleSocialLogin(githubProvider, githubBtn, '/auth/github/'); 
+    githubBtn.onclick = () => handleSocialLogin(githubProvider, githubBtn, '/auth/github/');
 </script>
 </body>
 </html>

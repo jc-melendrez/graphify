@@ -36,6 +36,7 @@ def validate_password_strength(password):
 
 
 # --- Views ---
+
 @csrf_protect
 @ratelimit(key='ip', rate='10/h', method='POST')
 def login_page(request):
@@ -44,8 +45,8 @@ def login_page(request):
         return redirect('dashie')
 
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
         
         if not email or not password:
             messages.error(request, 'Email and password are required.')
@@ -54,29 +55,31 @@ def login_page(request):
             })
         
         try:
-            # 1. Fetch the user from Firebase
             firebase_user = auth.get_user_by_email(email)
-            
-            # 2. Check the user's authentication providers
             providers = [p.provider_id for p in firebase_user.provider_data]
             
-            if 'password' not in providers:
-                # User exists but didn't use an email/password to sign up
-                if 'google.com' in providers:
+            # THE FIX: Accurately report if BOTH accounts are linked!
+            if ('google.com' in providers or 'github.com' in providers) and 'password' not in providers:
+                if 'google.com' in providers and 'github.com' in providers:
+                    messages.warning(request, 'This email is linked to BOTH Google and GitHub. Please use either sign-in button below.')
+                elif 'google.com' in providers:
                     messages.warning(request, 'This email is linked to Google. Please use the Google sign-in button below.')
-                elif 'github.com' in providers:
-                    messages.warning(request, 'This email is linked to GitHub. Please use the GitHub sign-in button below.')
                 else:
-                    messages.warning(request, 'This account uses social sign-in. Please use the appropriate button below.')
+                    messages.warning(request, 'This email is linked to GitHub. Please use the GitHub sign-in button below.')
                 
                 return render(request, 'authentication/login.html', {
                     'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
                 })
 
-            # 3. Verify the password securely via REST API
             api_key = settings.FIREBASE_PUBLIC_CONFIG.get('apiKey')
-            verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
             
+            if not api_key:
+                messages.error(request, "Server Configuration Error: Firebase API Key is missing. Check your .env file.")
+                return render(request, 'authentication/login.html', {
+                    'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
+                })
+
+            verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
             payload = {
                 "email": email,
                 "password": password,
@@ -86,12 +89,18 @@ def login_page(request):
             response = requests.post(verify_url, json=payload)
             
             if response.status_code != 200:
-                messages.error(request, 'Invalid email or password.')
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', 'UNKNOWN_ERROR')
+                
+                if error_msg == 'INVALID_LOGIN_CREDENTIALS':
+                    messages.error(request, 'Invalid email or password.')
+                else:
+                    messages.error(request, f'Login failed: {error_msg}')
+                    
                 return render(request, 'authentication/login.html', {
                     'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
                 })
 
-            # 4. If password is correct, sync with Django and log in
             django_user, created = User.objects.get_or_create(
                 username=firebase_user.uid,
                 defaults={
@@ -111,13 +120,74 @@ def login_page(request):
             logging.error(f"Login error: {e}")
             messages.error(request, 'Login failed. Please try again.')
 
-    # Securely pass the config to the template
     context = {
         'firebase_config': json.dumps(settings.FIREBASE_PUBLIC_CONFIG)
     }
     return render(request, 'authentication/login.html', context)
 
+@csrf_protect
+def otp_verify_view(request):
+    """Verifies the OTP and activates the Firebase account."""
+    reg_data = request.session.get('registration_data')
+    if not reg_data:
+        messages.error(request, "Session expired. Please try registering again.")
+        return redirect('register')
 
+    if request.method == 'POST':
+        submitted_otp = request.POST.get('otp', '')
+        
+        if time.time() > reg_data.get('otp_expiry', 0):
+            messages.error(request, "OTP has expired. Please register again.")
+            _clear_registration_session(request)
+            return redirect('register')
+        
+        submitted_otp_hash = hashlib.sha256(submitted_otp.encode()).hexdigest()
+        stored_otp_hash = reg_data.get('otp_hash', '')
+        
+        if not secrets.compare_digest(submitted_otp_hash, stored_otp_hash):
+            messages.error(request, "Invalid OTP. Please try again.")
+            return render(request, 'authentication/verify_otp.html', {'email': reg_data.get('email')})
+        
+        try:
+            uid = reg_data.get('uid')
+            email = reg_data.get('email')
+            
+            if not uid or not email:
+                messages.error(request, "Registration data corrupted. Please try again.")
+                _clear_registration_session(request)
+                return redirect('register')
+            
+            # --- THE FIX: MARK EMAIL AS VERIFIED ---
+            auth.update_user(uid, disabled=False, email_verified=True)
+            
+            db = firestore.client()
+            user_doc = db.collection('users').document(uid)
+            user_doc.set({
+                'email': email,
+                'firebase_uid': uid,
+                'providers': ['email'],
+                'created_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            django_user, created = User.objects.get_or_create(
+                username=uid,
+                defaults={'email': email, 'first_name': '', 'last_name': ''}
+            )
+            django_user.set_unusable_password()
+            django_user.save()
+            
+            _clear_registration_session(request)
+            
+            login(request, django_user)
+            return redirect('dashie')
+                
+        except Exception as e:
+            logging.error(f"Activation error: {str(e)}")
+            messages.error(request, "Failed to activate account. Please try again.")
+            return redirect('register')
+
+    return render(request, 'authentication/verify_otp.html', {'email': reg_data.get('email')})
+    
 @csrf_exempt
 @ratelimit(key='ip', rate='20/h', method='POST')
 def google_login(request):
@@ -318,78 +388,3 @@ def register_view(request):
             return render(request, 'authentication/register.html')
 
     return render(request, 'authentication/register.html')
-
-
-@csrf_protect
-def otp_verify_view(request):
-    """Verifies the OTP and activates the Firebase account."""
-    reg_data = request.session.get('registration_data')
-    if not reg_data:
-        messages.error(request, "Session expired. Please try registering again.")
-        return redirect('register')
-
-    if request.method == 'POST':
-        submitted_otp = request.POST.get('otp', '')
-        
-        # Check expiry
-        if time.time() > reg_data.get('otp_expiry', 0):
-            messages.error(request, "OTP has expired. Please register again.")
-            _clear_registration_session(request)
-            return redirect('register')
-        
-        # Verify OTP Hash
-        submitted_otp_hash = hashlib.sha256(submitted_otp.encode()).hexdigest()
-        stored_otp_hash = reg_data.get('otp_hash', '')
-        
-        if not secrets.compare_digest(submitted_otp_hash, stored_otp_hash):
-            messages.error(request, "Invalid OTP. Please try again.")
-            return render(request, 'authentication/verify_otp.html', {'email': reg_data.get('email')})
-        
-        try:
-            uid = reg_data.get('uid')
-            email = reg_data.get('email')
-            
-            if not uid or not email:
-                messages.error(request, "Registration data corrupted. Please try again.")
-                _clear_registration_session(request)
-                return redirect('register')
-            
-            # --- OTP IS VALID. ACTIVATE THE ACCOUNT IN FIREBASE ---
-            auth.update_user(uid, disabled=False)
-            
-            # Setup Firestore Profile
-            db = firestore.client()
-            user_doc = db.collection('users').document(uid)
-            user_doc.set({
-                'email': email,
-                'firebase_uid': uid,
-                'providers': ['email'],
-                'created_at': firestore.SERVER_TIMESTAMP
-            })
-            
-            # Create Django Session User
-            django_user, created = User.objects.get_or_create(
-                username=uid,
-                defaults={'email': email, 'first_name': '', 'last_name': ''}
-            )
-            django_user.set_unusable_password()
-            django_user.save()
-            
-            # Clean up
-            _clear_registration_session(request)
-            
-            # Log in
-            login(request, django_user)
-            return redirect('dashie')
-                
-        except Exception as e:
-            logging.error(f"Activation error: {str(e)}")
-            messages.error(request, "Failed to activate account. Please try again.")
-            return redirect('register')
-
-    return render(request, 'authentication/verify_otp.html', {'email': reg_data.get('email')})
-
-def _clear_registration_session(request):
-    """Securely clears all registration-related session data."""
-    if 'registration_data' in request.session:
-        del request.session['registration_data']
