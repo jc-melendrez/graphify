@@ -632,56 +632,54 @@ function detectTypes(columns, rows) {
    ────────────────────────────────────────────── */
 function processFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    const reader = new FileReader();
+    
+    const formData = new FormData();
+    formData.append('name', file.name.split('.')[0]);
+    formData.append('file', file);
 
-    reader.onload = function(e) {
-        try {
-            let result;
-            if (ext === 'csv' || ext === 'tsv') {
-                result = parseCSV(e.target.result);
-            } else if (ext === 'json') {
-                result = parseJSON(e.target.result);
-            } else if (ext === 'xlsx' || ext === 'xls') {
-                result = parseXLSX(new Uint8Array(e.target.result));
-            } else {
-                toast('Unsupported file type: .' + ext, 'error');
-                return;
-            }
+    toast('Uploading and processing...', 'info');
 
-            // Truncate if too many rows
-            let truncated = false;
-            if (result.rows.length > MAX_ROWS) {
-                result.rows = result.rows.slice(0, MAX_ROWS);
-                truncated = true;
-            }
-
-            const types = detectTypes(result.columns, result.rows);
-            parsedData = { columns: result.columns, rows: result.rows, types };
-
-            // Default config
-            const stringCols = types.map((t, i) => t === 'string' ? i : -1).filter(i => i >= 0);
-            const numericCols = types.map((t, i) => t === 'number' ? i : -1).filter(i => i >= 0);
-
-            config.xColumn = stringCols.length > 0 ? stringCols[0] : 0;
-            config.yColumns = numericCols.slice(0, 5);
-            config.title = '';
-            config.chartType = 'ColumnChart';
-            config.theme = 'sunset';
-
-            updateUI(file.name, ext.toUpperCase(), truncated);
-            toast(`Loaded ${result.rows.length} rows, ${result.columns.length} columns`, 'success');
-
-            if (googleReady) drawChart();
-        } catch (err) {
-            toast('Parse error: ' + err.message, 'error');
+    // Phase 1: Upload the file
+    fetch('/api/datasets/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
         }
-    };
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Upload failed');
+        return response.json();
+    })
+    .then(dataset => {
+        // Phase 2: Fetch the chart-ready data using the returned ID
+        return fetch(`/api/datasets/${dataset.id}/graph/`);
+    })
+    .then(response => response.json())
+    .then(graphData => {
+        // Phase 3: Update local state with server-processed data
+        parsedData = {
+            columns: graphData.columns,
+            // Map dict records back to array format for your existing table logic
+            rows: graphData.data.map(row => graphData.columns.map(col => row[col])),
+            types: detectTypes(graphData.columns, graphData.data.map(row => graphData.columns.map(col => row[col])))
+        };
 
-    if (ext === 'xlsx' || ext === 'xls') {
-        reader.readAsArrayBuffer(file);
-    } else {
-        reader.readAsText(file);
-    }
+        // Set initial config based on server data
+        config.title = graphData.title;
+        const stringCols = parsedData.types.map((t, i) => t === 'string' ? i : -1).filter(i => i >= 0);
+        const numericCols = parsedData.types.map((t, i) => t === 'number' ? i : -1).filter(i => i >= 0);
+        config.xColumn = stringCols.length > 0 ? stringCols[0] : 0;
+        config.yColumns = numericCols.slice(0, 5);
+
+        updateUI(file.name, ext.toUpperCase(), false);
+        toast('File processed by server', 'success');
+        if (googleReady) drawChart();
+    })
+    .catch(err => {
+        toast('Error: ' + err.message, 'error');
+        console.error(err);
+    });
 }
 
 /* ──────────────────────────────────────────────

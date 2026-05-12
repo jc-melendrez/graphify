@@ -1,13 +1,24 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from .models import Dataset
 from .serializers import DatasetSerializer, GraphDataSerializer, CSVParser
 import pandas as pd
 import os
+
+def landing_page(request):
+    """View to render the landing page."""
+    return render(request, 'main/landing_page.html')
+
+@login_required
+def dashie(request):
+    """View to render the main dashboard (requires login)."""
+    return render(request, 'main/dashie.html')
 
 
 class DatasetViewSet(viewsets.ModelViewSet):

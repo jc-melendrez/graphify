@@ -9,7 +9,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dataset
         fields = ['id', 'name', 'file', 'file_type', 'created_at', 'rows_count']
-        read_only_fields = ['id', 'created_at', 'rows_count']
+        read_only_fields = ['id', 'file_type', 'created_at', 'rows_count']
     
     def validate_file(self, value):
         """Validate uploaded file"""
