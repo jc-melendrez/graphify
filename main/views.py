@@ -18,7 +18,7 @@ def landing_page(request):
 @login_required
 def dashie(request):
     """View to render the main dashboard (requires login)."""
-    return render(request, 'main/dashboard.html')
+    return render(request, 'main/dashie.html')
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
