@@ -74,7 +74,8 @@ if not firebase_admin._apps:
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
+
 
 ALLOWED_HOSTS = [
     'private-mustiness-babied.ngrok-free.dev',
@@ -82,12 +83,14 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'graphify-bgcw.onrender.com',
     'graphify-io.onrender.com',
+    'eloquent-flagpole-resupply.ngrok-free.dev'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://private-mustiness-babied.ngrok-free.dev',
     'https://graphify-bgcw.onrender.com',
     'https://graphify-io.onrender.com',
+    'https://eloquent-flagpole-resupply.ngrok-free.dev/'
 ]
 
 # settings.py
@@ -113,7 +116,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
+    'authentication',
     'corsheaders',
+    'django_ratelimit',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -156,6 +162,24 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Cache Configuration for Rate Limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'graphify-cache',
+    }
+}
+
+# Rate Limiting Configuration
+RATELIMIT_ENABLE = True
+
+
+#for development lang
+SILENCED_SYSTEM_CHECKS = [
+    'django_ratelimit.E003',
+    'django_ratelimit.W001',
+]
 
 
 # Password validation
@@ -226,3 +250,32 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Django REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'authentication.authentication.FirebaseAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+    },
+}
