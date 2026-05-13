@@ -23,7 +23,7 @@ def dashie(request):
 
 class DatasetViewSet(viewsets.ModelViewSet):
     """ViewSet for Dataset CRUD operations"""
-    queryset = Dataset.objects.all()
+    queryset = Dataset.objects.none()  # Safety default
     serializer_class = DatasetSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -33,23 +33,8 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return Dataset.objects.filter(user=self.request.user).order_by('-created_at')
     
     def perform_create(self, serializer):
-        """Create a new dataset with file processing"""
-        file = self.request.FILES.get('file')
-        
-        if not file:
-            raise serializers.ValidationError("No file uploaded")
-        
-        # Determine file type
-        file_name = file.name.lower()
-        if file_name.endswith('.csv'):
-            file_type = 'csv'
-        elif file_name.endswith(('.xlsx', '.xls')):
-            file_type = 'excel'
-        else:
-            raise serializers.ValidationError("Only CSV and Excel files are allowed")
-        
-        # Create dataset with file type
-        serializer.save(file_type=file_type, user=self.request.user)
+        """Create a new dataset associated with the current user"""
+        serializer.save(user=self.request.user)
     
     @action(detail=True, methods=['get'], url_path='graph')
     def graph(self, request, pk=None):
@@ -105,9 +90,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
-        """Get statistics about all datasets"""
-        total_datasets = Dataset.objects.count()
-        total_rows = Dataset.objects.aggregate(
+        """Get statistics about the current user's datasets"""
+        queryset = self.get_queryset()
+        total_datasets = queryset.count()
+        total_rows = queryset.aggregate(
             total_rows=Sum('rows_count')
         )['total_rows'] or 0
         

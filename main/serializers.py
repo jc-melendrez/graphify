@@ -18,10 +18,19 @@ class DatasetSerializer(serializers.ModelSerializer):
         
         # Check file extension
         file_name = value.name.lower()
-        if not (file_name.endswith('.csv') or file_name.endswith('.xlsx') or file_name.endswith('.xls')):
+        if file_name.endswith('.csv'):
+            self.context['file_type'] = 'csv'
+        elif file_name.endswith(('.xlsx', '.xls')):
+            self.context['file_type'] = 'excel'
+        else:
             raise serializers.ValidationError("Only CSV and Excel files are allowed")
         
         return value
+
+    def create(self, validated_data):
+        """Injected calculated file_type from validation context"""
+        validated_data['file_type'] = self.context.get('file_type', 'csv')
+        return super().create(validated_data)
 
 
 class GraphDataSerializer(serializers.Serializer):

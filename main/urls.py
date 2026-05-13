@@ -10,12 +10,13 @@ router.register(r'datasets', views.DatasetViewSet, basename='dataset')
 
 # API URLs
 urlpatterns = [
+    # Frontend Pages
     path('', views.landing_page, name='landing_page'),
-    path('dashboard/', views.dashie, name='dashie'),
+    path('dashie/', views.dashie, name='dashie'),
     
+    # API Endpoints
+    # Explicitly mapped paths go first to match documentation exactly
+    path('api/parse-csv/', views.DatasetViewSet.as_view({'post': 'parse_csv'}), name='api-parse-csv'),
+    path('api/stats/', views.DatasetViewSet.as_view({'get': 'stats'}), name='api-stats'),
     path('api/', include(router.urls)),
-    # Additional custom endpoints
-    path('api/datasets/<int:pk>/graph/', views.DatasetViewSet.as_view({'get': 'graph'}), name='dataset-graph'),
-    path('api/parse-csv/', views.DatasetViewSet.as_view({'post': 'parse_csv'}), name='parse-csv'),
-    path('api/stats/', views.DatasetViewSet.as_view({'get': 'stats'}), name='stats'),
 ]

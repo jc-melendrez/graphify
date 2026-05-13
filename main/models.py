@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
+from django.conf import settings
 import os
+import pandas as pd
 
 
 class DatasetStorage(FileSystemStorage):
@@ -48,33 +50,29 @@ class Dataset(models.Model):
     
     def save(self, *args, **kwargs):
         """Save the model and count rows safely"""
-
-        # first save file to disk
         is_new = self.pk is None
-        super().save(*args, **kwargs)
-
-        # only calculate once after initial save
+        
+        # If it's a new upload, count rows before the first save if the file is available
         if is_new and self.file and self.file_type in ['csv', 'excel']:
-            self.rows_count = self._count_rows()
-            Dataset.objects.filter(pk=self.pk).update(rows_count=self.rows_count)
+            try:
+                self.rows_count = self._count_rows()
+            except Exception:
+                self.rows_count = 0
+                
+        super().save(*args, **kwargs)
         
     def _count_rows(self):
         """Count rows in the uploaded file"""
-        try:
-            if self.file_type == 'csv':
-                import pandas as pd
-                df = pd.read_csv(self.file)
-                return len(df)
-            elif self.file_type == 'excel':
-                import pandas as pd
-                df = pd.read_excel(self.file)
-                return len(df)
+        if self.file_type == 'csv':
+            df = pd.read_csv(self.file)
+        elif self.file_type == 'excel':
+            df = pd.read_excel(self.file)
+        else:
             return 0
-        except Exception:
-            return 0
+        return len(df)
     
     def get_file_path(self):
         """Get the file path relative to media directory"""
         if self.file:
-            return os.path.relpath(self.file.path, os.path.join(os.path.dirname(__file__), '..', 'media'))
+            return os.path.relpath(self.file.path, settings.MEDIA_ROOT)
         return None
